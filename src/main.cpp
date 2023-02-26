@@ -9,8 +9,20 @@
 #define LAT "40 19.732"
 #define LONG "03 43.295"
 #define INTENTOS 10
+#define SPEAKER 6
 #define BOTONES 4
-#define DEBUG
+//#define DEBUG
+/*
+B♭ (blue, lower right);
+C♯ (yellow, lower left);
+F (red, upper right).
+B♭ (green, upper left, an octave higher than blue);
+*/
+#define B 466.164
+#define C 277.183
+#define FA 349.228
+#define BUP 932.328
+float notas[4] = {C, FA, B, BUP};
 enum colores
 {
   azul = 1,
@@ -18,13 +30,16 @@ enum colores
   verde = 3,
   naranja = 4
 };
-const int led[BOTONES] = {1, 2, 3, 4};
+const int led[BOTONES] = {2, 3, 4, 5};
 int secuencia[INTENTOS];
 volatile byte wakeupSource;
 bool error = false;
 void delayLowPower(period_t tiempo)
 {
-  LowPower.powerDown(tiempo, ADC_OFF, BOD_OFF);
+  if (tiempo == TIEMPO_ON)
+    delay(250);
+  else
+    LowPower.powerDown(tiempo, ADC_OFF, BOD_OFF);
 }
 
 void todosLeds(boolean encendidos)
@@ -36,7 +51,8 @@ void todosLeds(boolean encendidos)
 
 void enciendeLed(int n)
 {
-
+  float nota;
+  tone(SPEAKER, notas[n], 250);
   digitalWrite(led[n], LOW);
   delayLowPower(TIEMPO_ON);
   digitalWrite(led[n], HIGH);
@@ -47,10 +63,14 @@ void ledsInicio()
 
   for (int n = 0; n < INTENTOS; n++)
   {
-    secuencia[n] = random(3); // para eso utiliza randon
+    secuencia[n] = random(BOTONES); // para eso utiliza randon
+#ifdef DEBUG
     Serial.print(secuencia[n]);
+#endif
   }
+#ifdef DEBUG
   Serial.println();
+#endif
 
   for (int k = 0; k < VECES_INTERMITENTE; k++)
   {
@@ -87,10 +107,13 @@ boolean leePulsador(int cual)
   return false;
 }
 
-
 void ledsError()
 {
-
+  for (byte n = BOTONES; n > 0; n--)
+  {
+    tone(SPEAKER, notas[n], 250);
+    delay(250);
+  }
   for (int k = 0; k < VECES_INTERMITENTE; k++)
   {
     todosLeds(LOW);
@@ -103,6 +126,11 @@ void ledsError()
 void lucesFinal()
 {
   // azul,rojo,verde
+  for (byte n = 0; n < BOTONES; n++)
+  {
+    tone(SPEAKER, notas[n], 250);
+    delay(250);
+  }
 
   for (byte n = 0; n < 5; n++)
   {
@@ -111,12 +139,12 @@ void lucesFinal()
   }
   for (byte n = 0; n < 7; n++)
   {
-    enciendeLed(1); // rojo
+    enciendeLed(1); // verde
     delayLowPower(TIEMPO_OFF);
   }
   for (byte n = 0; n < 4; n++)
   {
-    enciendeLed(2); // Verde
+    enciendeLed(2); // amarillo
     delayLowPower(TIEMPO_OFF);
   }
   delayLowPower(SLEEP_2S);
@@ -137,6 +165,8 @@ void setup()
 void loop()
 {
   error = false;
+  tone(SPEAKER, 400, 1000);
+  delay(500);
   ledsInicio();
   for (int k = 0; k < INTENTOS; k++)
   {
@@ -164,7 +194,7 @@ void loop()
   }
   if (!error)
   {
-    for (byte n = 0; n < 3; n++)
+    for (byte n = 0; n < 2; n++) //repeat three times
       lucesFinal();
     for (int n = 0; n < BOTONES; n++)
       pinMode(led[n], INPUT);
@@ -177,27 +207,3 @@ void loop()
   for (int n = 0; n < BOTONES; n++)
     pinMode(led[n], OUTPUT);
 }
-
-
-
-
-
-/*void escribeCadena(char *cadena)
-{
-  int n = 0;
-  int k[8];
-  int c;
-  boolean punto = false;
-  while (cadena[n] != 0)
-  {
-    c = cadena[n];
-    if (c == 32)c = 12; else c -= 48;
-    if (cadena[n + 1] == '.') {
-      punto = true;
-      n++;
-    } else punto = false ;
-
-    n++;
-  }
-}
-*/
